@@ -1,11 +1,22 @@
 import * as ts from 'typescript';
 import * as fs from 'fs';
+import * as minimist from 'minimist';
 
-const fileName = 'node_modules/googleapis/build/src/apis/displayvideo/v1.d.ts';
-const entryPoint = 'displayvideo_v1';
+// const fileName = 'node_modules/googleapis/build/src/apis/displayvideo/v1.d.ts';
+// const entryPoint = 'displayvideo_v1';
 
 // const fileName = 'samples/sample.ts';
 // const entryPoint = 'IntStudent';
+
+const args = minimist(process.argv);
+
+const fileName = args.file;
+const entryPoint = args.entry;
+
+if (!fileName || !entryPoint) {
+  console.log('ts-interface-extract --file=<ts file path> --entry=<entry point (namespace or interface)>');
+  process.exit();
+}
 
 const IGNORED_TYPE_REFERENCES = ['Array'];
 
