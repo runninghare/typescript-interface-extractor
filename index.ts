@@ -2,16 +2,21 @@ import * as ts from 'typescript';
 import * as fs from 'fs';
 import * as minimist from 'minimist';
 
-// const fileName = 'node_modules/googleapis/build/src/apis/displayvideo/v1.d.ts';
-// const entryPoint = 'displayvideo_v1';
-
-// const fileName = 'samples/sample.ts';
-// const entryPoint = 'IntStudent';
+import { doubleclickbidmanager_v1_1} from 'googleapis';
 
 const args = minimist(process.argv);
 
-const fileName = args.file;
-const entryPoint = args.entry;
+let fileName = args.file;
+let entryPoint = args.entry;
+
+// fileName = 'node_modules/googleapis/build/src/apis/displayvideo/v1.d.ts';
+// entryPoint = 'displayvideo_v1';
+
+fileName = 'node_modules/googleapis/build/src/apis/doubleclickbidmanager/v1.1.d.ts';
+entryPoint = 'doubleclickbidmanager_v1_1';
+
+// fileName = 'samples/sample.ts';
+// entryPoint = 'IntStudent';
 
 if (!fileName || !entryPoint) {
   console.log('ts-interface-extract --file=<ts file path> --entry=<entry point (namespace or interface)>');
@@ -58,6 +63,7 @@ let entryPointIsNameSpace: boolean = false;
 
 function extractInterfaces(node: ts.Node) {
   let currentContainer: IntExtracted = null;
+  
   if (node['name']?.text === entryPoint) {
     console.log('=== Found Entry Point ===');
     currentContainer = rootInterface;
@@ -66,6 +72,7 @@ function extractInterfaces(node: ts.Node) {
       currentContainer.type = {
         name: 'namespace'
       };
+      allTypeDefinitions.push(currentContainer);
       containersStack.push(currentContainer);
     } else {
       entryPointIsNameSpace = false;
@@ -74,7 +81,6 @@ function extractInterfaces(node: ts.Node) {
 
   currentContainer = containersStack[containersStack.length - 1];
   if (ts.isModuleDeclaration(node) && node['name'].text === entryPoint) {
-
     ts.forEachChild(node, (childNode) => extractInterfaces(childNode));
   } else if (ts.isImportSpecifier(node)) {
     importSpecifiers[node.name.text] = node;
@@ -226,6 +232,11 @@ function extractInterfaces(node: ts.Node) {
         type: { name: key }
       };
       definition.children = [];
+
+      if (!currentContainer) {
+        console.error(`Error processing: ${entryPoint} is not found!`);
+        process.exit();
+      }
       currentContainer.type = definition;
       containersStack.push(definition);
       extractInterfaces(declarationNode);
@@ -278,13 +289,14 @@ function addChild(definition: IntExtracted) {
 let result = '';
 
 function writeItem(item: IntExtracted) {
-  const whiteSpace = entryPointIsNameSpace ? '    ' : '';
-  if (item.type?.name === 'namespace') {
+  let whiteSpace = entryPointIsNameSpace ? '    ' : '';
+  if (item.name === entryPoint && entryPointIsNameSpace) {
     result += `export declare namespace ${item.name} {` + "\n";
     if (item.children) {
       item.children.forEach(child => writeItem(child));
     }
     result += "\n" + `}` + "\n\n";
+    whiteSpace = '';
   } else if (item.type?.name === 'interface') {
     const inheritance = item.parents?.length > 0 ? ' extends ' + item.parents.join(', ') : '';
     result += `${whiteSpace}export interface ${item.name}${inheritance} {` + "\n\n";
