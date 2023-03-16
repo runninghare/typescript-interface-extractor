@@ -2,7 +2,8 @@ import * as ts from 'typescript';
 import * as fs from 'fs';
 import * as minimist from 'minimist';
 
-import { doubleclickbidmanager_v1_1} from 'googleapis';
+import {  analyticsadmin_v1alpha, analyticsdata_v1beta  } from 'googleapis';
+import { GaxiosResponse } from 'googleapis-common';
 
 const args = minimist(process.argv);
 
@@ -12,8 +13,21 @@ let entryPoint = args.entry;
 // fileName = 'node_modules/googleapis/build/src/apis/displayvideo/v1.d.ts';
 // entryPoint = 'displayvideo_v1';
 
-fileName = 'node_modules/googleapis/build/src/apis/doubleclickbidmanager/v1.1.d.ts';
-entryPoint = 'doubleclickbidmanager_v1_1';
+// fileName = 'node_modules/googleapis/build/src/apis/doubleclickbidmanager/v1.1.d.ts';
+// entryPoint = 'doubleclickbidmanager_v1_1';
+
+// fileName = 'node_modules/googleapis/build/src/apis/doubleclicksearch/v2.d.ts';
+// entryPoint = 'dfareporting_v4'
+
+// fileName = 'node_modules/googleapis/build/src/apis/analyticsadmin/v1alpha.d.ts';
+// entryPoint = 'analyticsadmin_v1alpha'
+
+// fileName = 'node_modules/googleapis/build/src/apis/analyticsdata/v1beta.d.ts';
+// entryPoint = 'analyticsdata_v1beta'
+
+fileName = 'node_modules/gaxios/build/src/common.d.ts';
+entryPoint = 'GaxiosResponse';
+
 
 // fileName = 'samples/sample.ts';
 // entryPoint = 'IntStudent';
@@ -79,7 +93,7 @@ function extractInterfaces(node: ts.Node) {
     }
   }
 
-  currentContainer = containersStack[containersStack.length - 1];
+  currentContainer = containersStack[containersStack.length - 1] || {};
   if (ts.isModuleDeclaration(node) && node['name'].text === entryPoint) {
     ts.forEachChild(node, (childNode) => extractInterfaces(childNode));
   } else if (ts.isImportSpecifier(node)) {
@@ -315,7 +329,7 @@ function writeItem(item: IntExtracted) {
       }
     });
     result += "\n}\n\n";
-  } else if (item.type.name === 'alias') {
+  } else if (item.type?.name === 'alias') {
     result += `${whiteSpace}export type ${item.name} = `
     if (item.type.type) {
       writeItem(item.type.type);
@@ -369,7 +383,7 @@ function writeFile() {
   allTypeDefinitions.forEach(item => {
     writeItem(item);
   })
-  fs.writeFileSync(`./dist/${entryPoint}.d.ts`, result);
+  fs.writeFileSync(`./dist/${entryPoint}.ts`, result);
   // fs.writeFileSync(`result.json`, JSON.stringify(allTypeDefinitions, null, 2));
 }
 
