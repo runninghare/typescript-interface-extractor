@@ -2,8 +2,8 @@ import * as ts from 'typescript';
 import * as fs from 'fs';
 import * as minimist from 'minimist';
 
-import {  analyticsadmin_v1alpha, analyticsdata_v1beta  } from 'googleapis';
-import { GaxiosResponse } from 'googleapis-common';
+// import {  analyticsadmin_v1alpha, analyticsdata_v1beta  } from 'googleapis';
+// import { GaxiosResponse } from 'googleapis-common';
 
 const args = minimist(process.argv);
 
@@ -25,16 +25,23 @@ let entryPoint = args.entry;
 // fileName = 'node_modules/googleapis/build/src/apis/analyticsdata/v1beta.d.ts';
 // entryPoint = 'analyticsdata_v1beta'
 
-fileName = 'node_modules/gaxios/build/src/common.d.ts';
-entryPoint = 'GaxiosResponse';
+// fileName = 'node_modules/gaxios/build/src/common.d.ts';
+// entryPoint = 'GaxiosResponse';
 
 
-// fileName = 'samples/sample.ts';
-// entryPoint = 'IntStudent';
+
+fileName = 'samples/template.ts';
+entryPoint = 'Student';
+
+const outputDir = './dist';
 
 if (!fileName || !entryPoint) {
   console.log('ts-interface-extract --file=<ts file path> --entry=<entry point (namespace or interface)>');
   process.exit();
+}
+
+if (!fs.existsSync(outputDir)){
+  fs.mkdirSync(outputDir);
 }
 
 const IGNORED_TYPE_REFERENCES = ['Array'];
@@ -58,6 +65,7 @@ interface IntExtracted {
   isProperty?: boolean;
   jsDoc?: string;
   value?: any;
+  typeParameters?: string[];
   children?: IntExtracted[];
 }
 
@@ -116,6 +124,9 @@ function extractInterfaces(node: ts.Node) {
         type: { name: 'interface'},
         children: []
       };
+      if (node.typeParameters?.length > 0) {
+        definition.typeParameters = node.typeParameters.map(p => p.name.text);
+      }
       if (parents.length > 0) {
         definition.parents = parents;
       }
@@ -232,12 +243,16 @@ function extractInterfaces(node: ts.Node) {
       const key = type['typeName'].text;
       const declarationNode = loadedType.symbol?.declarations[0] || loadedType.aliasSymbol?.declarations[0];
       if (IGNORED_TYPE_REFERENCES.indexOf(key) > -1 || !declarationNode || ts.isClassDeclaration(declarationNode) || ts.isFunctionTypeNode(declarationNode)) {
-        console.log(`      -> ignore reference from ${key}, replace it with any`);
-        currentContainer.type = {
-          name: 'any',
-          type: builtInTypeAny
-        };
-        return;
+        if (key !== 'Array' || node['typeArguments']?.length > 0) {
+          console.log(`Processing Array Template`);
+        } else {
+          console.log(`      -> ignore reference from ${key}, replace it with any`);
+          currentContainer.type = {
+            name: 'any',
+            type: builtInTypeAny
+          };
+          return;
+        }
       }
 
       console.log(`      -> ${key}`);
@@ -246,6 +261,10 @@ function extractInterfaces(node: ts.Node) {
         type: { name: key }
       };
       definition.children = [];
+
+      if (node['typeArguments']?.length > 0) {
+        definition.typeParameters = node['typeArguments'].map(t => t.typeName.text);
+      }
 
       if (!currentContainer) {
         console.error(`Error processing: ${entryPoint} is not found!`);
@@ -313,6 +332,9 @@ function writeItem(item: IntExtracted) {
     whiteSpace = '';
   } else if (item.type?.name === 'interface') {
     const inheritance = item.parents?.length > 0 ? ' extends ' + item.parents.join(', ') : '';
+    if (item.typeParameters) {
+      item.name = item.name + `<${item.typeParameters.join(',')}>`;
+    }
     result += `${whiteSpace}export interface ${item.name}${inheritance} {` + "\n\n";
     if (item.children) {
       item.children.forEach(child => writeItem(child));
@@ -350,7 +372,11 @@ function writeItem(item: IntExtracted) {
       result += `${whiteSpace}*/\n`;
       // result += item.jsDoc.replace(/^|\n/g, "\n" + whiteSpace) + "\n";
     }
-    result += `${whiteSpace}${key}${item.isOptional ? '?' : ''}: ${typeName || 'any'};` + "\n\n";
+    let typeString = typeName || 'any';
+    if ((item.type?.typeParameters)) {
+      typeString += `<${item.type.typeParameters.join(',')}>`;
+    }
+    result += `${whiteSpace}${key}${item.isOptional ? '?' : ''}: ${typeString};` + "\n\n";
   } else if (item.name === 'union') {
     result += item.children?.length > 0 ? item.children.map(t => getNameFromNestedType(t)).filter(n => !!n).join(' | ') : 'any';
   }
@@ -358,6 +384,7 @@ function writeItem(item: IntExtracted) {
 
 function getNameFromNestedType(item: IntExtracted) {
   let name = item.name || '';
+  let typeParameters = item.typeParameters;
   let arrayMode: boolean = false;
   if (item.name === 'array') {
     arrayMode = true;
@@ -374,7 +401,12 @@ function getNameFromNestedType(item: IntExtracted) {
       return name;  // --- final array formed
     } else {
       name = item.name;
+      typeParameters = item.typeParameters
     }
+  }
+
+  if (typeParameters?.length > 0) {
+    name = `${name}<${typeParameters.join(',')}>`
   }
   return name;
 }
