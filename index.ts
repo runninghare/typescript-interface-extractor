@@ -260,7 +260,7 @@ function extractInterfaces(node: ts.Node) {
 
       const declarationNode = loadedType.symbol?.declarations[0] || loadedType.aliasSymbol?.declarations[0];
       if (IGNORED_TYPE_REFERENCES.indexOf(key) > -1 || !declarationNode || ts.isClassDeclaration(declarationNode) || ts.isFunctionTypeNode(declarationNode)) {
-        if (key !== 'Array' && node['typeArguments']?.length > 0) {
+        if (key !== 'Array' || node['typeArguments']?.length > 0) {
           console.log(`Processing Array Template`);
         } else {
           console.log(`      -> ignore reference from ${key}, replace it with any`);
@@ -274,9 +274,6 @@ function extractInterfaces(node: ts.Node) {
 
       console.log(`      -> ${key}`);
 
-      const foundDefinition = allTypeDefinitions.find(d => d.name === key);
-
-      if (!foundDefinition) {
         const definition: IntExtracted = {
           name: key,
           type: { name: key }
@@ -299,7 +296,6 @@ function extractInterfaces(node: ts.Node) {
         containersStack.push(definition);
         extractInterfaces(declarationNode);
         containersStack.pop();
-      }
     } else if (type.kind === ts.SyntaxKind.UnionType) {
       console.log('      -> Union');
       const typeDefinition = {
