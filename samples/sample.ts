@@ -18,9 +18,9 @@ export interface IntStudent extends IntLabel, IntInterest {
 
     action: TAction;
 
-    grade: EGrade;
+    grade: Array<EGrade>;
 
     details?: Array<{
         [key: string]: any;
-    }>
+    }> | null;
 }

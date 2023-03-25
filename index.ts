@@ -28,8 +28,8 @@ entryPoint = 'displayvideo_v1';
 // fileName = 'node_modules/gaxios/build/src/common.d.ts';
 // entryPoint = 'GaxiosResponse';
 
-// fileName = 'samples/template.ts';
-// entryPoint = 'Student';
+// fileName = 'samples/sample.ts';
+// entryPoint = 'IntStudent';
 
 const outputDir = './dist';
 
@@ -253,7 +253,7 @@ function extractInterfaces(node: ts.Node) {
         console.log(`      -> ignore ${key} because it is a class; replace it with any`);
         currentContainer.type = { name: 'any', type: builtInTypeAny };
         return;
-      } else if (ts.isFunctionDeclaration(declarationNode)) {
+      } else if (ts.isFunctionDeclaration(declarationNode) || ts.isFunctionOrConstructorTypeNode(declarationNode)) {
         console.log(`      -> ignore ${key} because it is a function; replace it with any`);
         currentContainer.type = { name: 'any', type: builtInTypeAny };
         return;
@@ -275,7 +275,7 @@ function extractInterfaces(node: ts.Node) {
   
       if (node['typeArguments']?.length > 0) {
         try {
-          definition.typeParameters = node['typeArguments'].map(t => t.typeName.text);
+          definition.typeParameters = node['typeArguments'].map(t => t.getText());
         } catch (error) {
           console.log(error);
         }
@@ -416,7 +416,7 @@ function getNameFromNestedType(item: IntExtracted) {
       return name;  // --- final array formed
     } else {
       name = item.name;
-      typeParameters = item.typeParameters
+      typeParameters = typeParameters || item.typeParameters
     }
   }
 
