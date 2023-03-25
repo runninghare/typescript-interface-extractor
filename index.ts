@@ -28,8 +28,6 @@ let entryPoint = args.entry;
 // fileName = 'node_modules/gaxios/build/src/common.d.ts';
 // entryPoint = 'GaxiosResponse';
 
-
-
 fileName = 'samples/template.ts';
 entryPoint = 'Student';
 
@@ -55,7 +53,9 @@ const builtInTypeString: IntExtracted = { name: 'string' };
 const builtInTypeNumber: IntExtracted = { name: 'number' };
 const builtInTypeBoolean: IntExtracted = { name: 'boolean' };
 const builtInTypeAny: IntExtracted = { name: 'any' };
+const builtInTypeUndefined: IntExtracted = { name: 'undefined' };
 const builtInTypeUnion: IntExtracted = { name: 'union' };
+const builtInTypePromise: IntExtracted = { name: 'Promise' };
 
 interface IntExtracted {
   name?: string;
@@ -110,6 +110,7 @@ function extractInterfaces(node: ts.Node) {
     console.log("\n"+`Interface: ${node.name.text}`);
     currentKey = node.name.text;
     const parents: string[] = [];
+
     let definition = allTypeDefinitions.find(item => item.name === currentKey);
     if (!definition) {
       if (node.heritageClauses?.length > 0) {
@@ -241,9 +242,25 @@ function extractInterfaces(node: ts.Node) {
       containersStack.pop();
     } else if (type.kind === ts.SyntaxKind.TypeReference) {
       const key = type['typeName'].text;
+      if (!key) {
+        currentContainer.type = {
+          name: 'undefined',
+          type: builtInTypeUndefined
+        };
+        return;
+      }
+
+      if (key === 'Promise') {
+        currentContainer.type = {
+          name: 'Promise',
+          type: builtInTypePromise
+        };
+        return;
+      }
+
       const declarationNode = loadedType.symbol?.declarations[0] || loadedType.aliasSymbol?.declarations[0];
       if (IGNORED_TYPE_REFERENCES.indexOf(key) > -1 || !declarationNode || ts.isClassDeclaration(declarationNode) || ts.isFunctionTypeNode(declarationNode)) {
-        if (key !== 'Array' || node['typeArguments']?.length > 0) {
+        if (key !== 'Array' && node['typeArguments']?.length > 0) {
           console.log(`Processing Array Template`);
         } else {
           console.log(`      -> ignore reference from ${key}, replace it with any`);
@@ -256,25 +273,33 @@ function extractInterfaces(node: ts.Node) {
       }
 
       console.log(`      -> ${key}`);
-      const definition: IntExtracted = {
-        name: key,
-        type: { name: key }
-      };
-      definition.children = [];
 
-      if (node['typeArguments']?.length > 0) {
-        definition.typeParameters = node['typeArguments'].map(t => t.typeName.text);
+      const foundDefinition = allTypeDefinitions.find(d => d.name === key);
+
+      if (!foundDefinition) {
+        const definition: IntExtracted = {
+          name: key,
+          type: { name: key }
+        };
+        definition.children = [];
+  
+        if (node['typeArguments']?.length > 0) {
+          try {
+            definition.typeParameters = node['typeArguments'].map(t => t.typeName.text);
+          } catch (error) {
+            console.log(error);
+          }
+        }
+  
+        if (!currentContainer) {
+          console.error(`Error processing: ${entryPoint} is not found!`);
+          process.exit();
+        }
+        currentContainer.type = definition;
+        containersStack.push(definition);
+        extractInterfaces(declarationNode);
+        containersStack.pop();
       }
-
-      if (!currentContainer) {
-        console.error(`Error processing: ${entryPoint} is not found!`);
-        process.exit();
-      }
-      currentContainer.type = definition;
-      containersStack.push(definition);
-      extractInterfaces(declarationNode);
-      containersStack.pop();
-
     } else if (type.kind === ts.SyntaxKind.UnionType) {
       console.log('      -> Union');
       const typeDefinition = {

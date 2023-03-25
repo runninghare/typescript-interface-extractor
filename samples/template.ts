@@ -1,7 +1,7 @@
 
 interface IntClass<T> {
     name: string;
-    location: string;
+    location: string[];
 }
 
 interface Student<T, M> {
