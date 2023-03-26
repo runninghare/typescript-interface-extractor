@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start:dev": "ts-node index.ts"
+    "start:dev": "ts-node index.ts --file=./samples/sample.ts --entry=IntStudent"
   },
   "author": "",
   "license": "ISC",

@@ -19,7 +19,8 @@
     "noFallthroughCasesInSwitch": false,
     "types": ["node"]
   },
-  "files": [
-    "./index.ts"
+  "include": [
+    "./index.ts",
+    "./src/**/*.ts"
   ]
 }
