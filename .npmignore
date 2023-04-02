@@ -1,0 +1,6 @@
+./src
+.npmignore
+.npmrc
+.gitignore
+tsconfig.json
+tslint.json

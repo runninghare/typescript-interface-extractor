@@ -1,6 +1,6 @@
 {
   "name": "typescript-interface-extractor",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -8,10 +8,12 @@
     "start:google:displayvideo": "ts-node index.ts --file=../lab-ts-apis-1/node_modules/googleapis/build/src/apis/displayvideo/v1.d.ts --entry=displayvideo_v1",
     "start:google:doubleclickbidmanager": "ts-node index.ts --file=../lab-ts-apis-1/node_modules/googleapis/build/src/apis/doubleclickbidmanager/v1.1.d.ts --entry=doubleclickbidmanager_v1_1"
   },
-  "author": "",
+  "bin": {
+    "typescript-interface-extractor": "./dist/index.js"
+  },
+  "author": "rossz",
   "license": "ISC",
   "dependencies": {
-    "googleapis": "^114.0.0",
     "minimist": "^1.2.8",
     "typescript": "^4.9.5"
   },

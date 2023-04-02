@@ -1,6 +1,7 @@
+#!/usr/bin/env node
 
 /**
- * @runninghare
+ * @rossz
  * @license MIT
  * @version 0.0.1
  * 
