@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start:dev": "ts-node index.ts --file=./samples/sample.ts --entry=IntStudent"
+    "start:dev": "ts-node index.ts --file=./samples/sample.ts --entry=IntStudent",
+    "start:googleapi": "ts-node index.ts --file=../lab-ts-apis-1/node_modules/googleapis/build/src/apis/displayvideo/v1.d.ts --entry=displayvideo_v1"
   },
   "author": "",
   "license": "ISC",

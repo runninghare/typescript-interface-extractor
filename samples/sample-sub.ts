@@ -15,3 +15,5 @@ export interface IntClass {
 }
 
 export type TAction = (input: string) => string;
+
+export type BodyResponseCallback<T> = (error: any, body: T, response: any) => void;
