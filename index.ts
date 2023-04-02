@@ -17,9 +17,9 @@ import { TsNodeAnalyzer } from './src/classes/analyze-ts-node.class';
 
 const args = minimist(process.argv);
 
-const fileName = args.file;
-const entryPoint = args.entry;
-const outputDir = args.output || './output';
+const fileName = args.file || args.f;
+const entryPoint = args.entry || args.e;
+const outputDir = args.output || args.o || './output';
 
 if (!fileName || !entryPoint) {
   console.log('ts-interface-extract --file=<ts file path> --entry=<entry point (namespace or interface)> [--output=<output directory>]');

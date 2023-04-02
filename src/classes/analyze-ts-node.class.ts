@@ -36,7 +36,7 @@ export class TsNodeAnalyzer {
 
         if (!this.rootFound) {
             if (node['name']?.text === this.entryPoint) {
-                console.log('=== Found Entry Point ===');
+                // console.log('=== Found Entry Point ===');
                 this.rootFound = true;
 
                 const rootContainer = {
