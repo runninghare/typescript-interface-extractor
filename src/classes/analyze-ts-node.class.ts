@@ -1,5 +1,4 @@
 import * as ts from 'typescript';
-import { IntExtractedNode } from "../interfaces/extracted.interface";
 
 const IGNORED_INTERFACE_NAME = ['Array', 'ConcatArray', 'Console'];
 
@@ -89,7 +88,7 @@ export class TsNodeAnalyzer {
     private analyzeModuleNode(node: ts.Node) {
         // this.putOutputStrings(node);
         this.outputStrings.push(`export declare namespace ${(node as any).name.text} {`);
-        this.indent = '    ';
+        this.indent = '  ';
         for (const symbol of (node as any).locals.values()) {
             symbol.declarations.forEach((declaration: ts.Node) => {
                 this.analyzeNode(declaration);
@@ -101,7 +100,7 @@ export class TsNodeAnalyzer {
 
     private analyzeInterfaceNode(node: ts.Node) {
         if (!IGNORED_INTERFACE_NAME.includes(node['name'].text)) {
-            this.processedNodeStrings.push(node['name'].text);
+            // this.processedNodeStrings.push(node['name'].text);
             this.putOutputStrings(node);
             this.scanChildren(node);
         }
@@ -114,8 +113,13 @@ export class TsNodeAnalyzer {
 
     private analyzeTypeNode(node: ts.Node) {
         // this.showText(node);
-        if (ts.isTypeReferenceNode(node)) {
-            this.analyzeTypeReference(node);
+        // if (ts.isIdentifier(node)) {
+        //     this.analyzeTypeReference(node);
+        // }
+        if (ts.isFunctionTypeNode(node)) {
+            node.parameters.forEach(p => {
+                this.analyzeNode(p.type);
+            });
         }
         this.scanChildren(node)
     }
@@ -125,58 +129,17 @@ export class TsNodeAnalyzer {
         this.scanChildren(node)
     }
 
-    private analyzeFunctionNode(node: ts.Node) {
-        this.putOutputStrings(node);
-    }
-
     private analyzePropertySignature(node: ts.Node) {
-        this.scanChildren(node);
-    }
-
-    private analyzeTypeReference(node: ts.Node) {
-        // this.showText(node);
-        const loadedType = this.checker.getTypeAtLocation(node);
-        const declarationNode = loadedType.symbol?.declarations[0] || loadedType.aliasSymbol?.declarations[0];
-        if (declarationNode) {
-            if (declarationNode.getText().match(/GaxiosPromise/)) {
-                console.log('--- Promise ---');
-            }
-            if (ts.isFunctionTypeNode(declarationNode)) {
-                let typeName = node['typeName']?.text;
-                if (!this.processedNodeStrings.includes(typeName)) {
-                    const matchedGenericTypes = declarationNode.getText().match(/<(\w+)>/g);
-                    if (matchedGenericTypes?.length > 0) {
-                        let generics = matchedGenericTypes.map(g => g.replace(/[<>]/g, ''));
-
-                        // make element of generics unique
-                        generics = generics.filter((g, i) => generics.indexOf(g) === i);
-                        typeName += `<${generics.join(', ')}>`;
-                    }
-                    this.outputStrings.push(`type ${typeName} = ${declarationNode.getText()};`);
-                    this.processedNodeStrings.push(node['typeName']?.text);
-                }
-            } else {
-                this.analyzeNode(declarationNode);
-            }
+        // if ((node as any).name?.text?.match(/fetchImplementation/)) {
+        //     debugger;
+        // }
+        if (node['type']) {
+            this.analyzeNode(node['type']);
         }
-        if (node['typeArguments']?.length > 0) {
-            // console.log('--- type arguments ---');
-            // node['typeArguments']?.forEach(argNode => {
-            //     const type = this.checker.getTypeAtLocation(argNode);
-            //     const typeSymbol = type?.getSymbol();
-            //     const typeName = typeSymbol?.getName();
-            //     const declaration = typeSymbol?.getDeclarations()[0];
-            //     if (declaration) {
-            //         console.log(`type: ${typeName}`);
-            //     }
-            // })
-        }
-
         this.scanChildren(node);
     }
 
     private analyzeHeritageClause(node: ts.Node) {
-        console.log(node);
         (node as any).types.forEach(t => {
             const parentLoadedType= this.checker.getTypeAtLocation(t.expression);
             parentLoadedType.symbol.declarations.forEach(declarationNode => {
@@ -187,7 +150,17 @@ export class TsNodeAnalyzer {
 
     private analyzeOtherNode(node: ts.Node) {
         if (ts.isClassDeclaration(node)) {
-            this.outputStrings.push(`type ${node['name'].text} = any;`);
+            this.outputStrings.push(this.indent + `type ${node['name'].text} = any;`);
+        } else if (ts.isIdentifier(node)) {
+            const loadedType = this.checker.getTypeAtLocation(node);
+            if (loadedType.symbol) {
+                loadedType.symbol?.declarations.forEach(declarationNode => {
+                    this.analyzeNode(declarationNode);
+                })
+            } else if (loadedType['intrinsicName'] && this.processedNodeStrings.includes(node.getText()) === false) {
+                this.processedNodeStrings.push(node.getText());
+                this.outputStrings.push(this.indent + `type ${node.getText()} = ${loadedType['intrinsicName']};`);
+            }
         }
     }
 
@@ -195,25 +168,31 @@ export class TsNodeAnalyzer {
         ts.forEachChild(node, (childNode) => {
             this.analyzeNode(childNode);
             const loadedType = this.checker.getTypeAtLocation(childNode);
-            if (loadedType.symbol?.declarations?.length || loadedType.aliasSymbol?.declarations.length) {
-                const declarationNode = loadedType.symbol?.declarations[0] || loadedType.aliasSymbol?.declarations[0];
-                if (declarationNode) {
+            if (loadedType.symbol?.declarations?.length > 0) {
+                loadedType.symbol?.declarations.forEach(declarationNode => {
                     this.analyzeNode(declarationNode);
-                }
+                });
             }
+            if (loadedType.aliasSymbol?.declarations.length > 0) {
+                loadedType.aliasSymbol?.declarations.forEach(declarationNode => {
+                    this.analyzeNode(declarationNode);
+                });
+            }
+            // if (loadedType['intrinsicName']) {
+            //     this.outputStrings.push(this.indent + `type ${childNode.getText()} = ${loadedType['intrinsicName']};`);
+            // }
         });
     }
 
     private putOutputStrings(node: ts.Node, prefix: string = '') {
-        let output = '';
+        let output = this.indent;
         const jsDocNodes = (node as any).jsDoc;
         const jsComment = jsDocNodes && jsDocNodes[0].getText();   // this is the text without comment tag (/*)
         if (jsComment) {
-            output += jsComment
+            output += jsComment + "\n";
         }
         output += prefix + node.getText();
         output = output.replace(new RegExp("\n", "g"), "\n" + this.indent);
-        output = this.indent + output;
         this.outputStrings.push(output);
     }
 }
