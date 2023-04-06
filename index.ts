@@ -14,6 +14,7 @@ import * as ts from 'typescript';
 import * as fs from 'fs';
 import * as minimist from 'minimist';
 import { TsNodeAnalyzer } from './src/classes/analyze-ts-node.class';
+import * as prettier from 'prettier';
 
 const args = minimist(process.argv);
 
@@ -49,5 +50,15 @@ if (sourceFile) {
   });
 
   const result = analyzer.outputStrings.join("\n\n");
-  fs.writeFileSync(`${outputDir}/${entryPoint}.d.ts`, result);
+
+  const formatOptions = {
+    parser: 'typescript',
+    tabWidth: 4, // The number of spaces per indentation level.
+    useTabs: false, // Whether to use spaces instead of tabs for indentation.
+  };
+
+  const formattedCode = prettier.format(result, formatOptions);
+
+  const destinationFile = `${outputDir}/${entryPoint}.d.ts`;
+  fs.writeFileSync(destinationFile, formattedCode);
 }

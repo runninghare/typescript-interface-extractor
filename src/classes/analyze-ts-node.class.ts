@@ -13,7 +13,6 @@ export class TsNodeAnalyzer {
     private checker: ts.TypeChecker;
     private processedNodes: ts.Node[] = [];
     private processedNodeStrings: string[] = [];
-    private indent: string = '';
 
     constructor(program: ts.Program, sourceFile: ts.SourceFile, entryPoint: string) {
         this.program = program;
@@ -88,13 +87,11 @@ export class TsNodeAnalyzer {
     private analyzeModuleNode(node: ts.Node) {
         // this.putOutputStrings(node);
         this.outputStrings.push(`export declare namespace ${(node as any).name.text} {`);
-        this.indent = '  ';
         for (const symbol of (node as any).locals.values()) {
             symbol.declarations.forEach((declaration: ts.Node) => {
                 this.analyzeNode(declaration);
             });
         }
-        this.indent = ''
         this.outputStrings.push(`\n}`);
     }
 
@@ -150,7 +147,7 @@ export class TsNodeAnalyzer {
 
     private analyzeOtherNode(node: ts.Node) {
         if (ts.isClassDeclaration(node)) {
-            this.outputStrings.push(this.indent + `type ${node['name'].text} = any;`);
+            this.outputStrings.push(`type ${node['name'].text} = any;`);
         } else if (ts.isIdentifier(node)) {
             const loadedType = this.checker.getTypeAtLocation(node);
             if (loadedType.symbol) {
@@ -159,7 +156,7 @@ export class TsNodeAnalyzer {
                 })
             } else if (loadedType['intrinsicName'] && this.processedNodeStrings.includes(node.getText()) === false) {
                 this.processedNodeStrings.push(node.getText());
-                this.outputStrings.push(this.indent + `type ${node.getText()} = ${loadedType['intrinsicName']};`);
+                this.outputStrings.push(`type ${node.getText()} = ${loadedType['intrinsicName']};`);
             }
         }
     }
@@ -179,20 +176,19 @@ export class TsNodeAnalyzer {
                 });
             }
             // if (loadedType['intrinsicName']) {
-            //     this.outputStrings.push(this.indent + `type ${childNode.getText()} = ${loadedType['intrinsicName']};`);
+            //     this.outputStrings.push(`type ${childNode.getText()} = ${loadedType['intrinsicName']};`);
             // }
         });
     }
 
     private putOutputStrings(node: ts.Node, prefix: string = '') {
-        let output = this.indent;
+        let output = '';
         const jsDocNodes = (node as any).jsDoc;
         const jsComment = jsDocNodes && jsDocNodes[0].getText();   // this is the text without comment tag (/*)
         if (jsComment) {
-            output += jsComment + "\n";
+            output += (prefix + jsComment + "\n");
         }
-        output += prefix + node.getText();
-        output = output.replace(new RegExp("\n", "g"), "\n" + this.indent);
+        output += (prefix + node.getText());
         this.outputStrings.push(output);
     }
 }
